@@ -325,7 +325,7 @@ footer span{color:var(--gold);}
     <div class="hero-name">Arshad</div>
     <div class="hero-title-wrap"><div class="hero-title-line"></div><span class="hero-title">Video Editor</span><div class="hero-title-line"></div></div>
     <p class="hero-tagline">Crafting visual stories that move audiences — from raw footage to cinematic excellence, frame by frame.</p>
-    <div class="hero-ctas"><a href="#recent-works" class="btn-primary">View My Work</a><a href="#contact" class="btn-outline">Let's Connect</a></div>
+    <div class="hero-ctas"><a href="#works" class="btn-primary">View My Work</a><a href="#contact" class="btn-outline">Let's Connect</a></div>
   </div>
   <div class="scroll-indicator"><span>Scroll</span><div class="scroll-line"></div></div>
 </section>
@@ -456,6 +456,23 @@ const observer = new IntersectionObserver(entries => {
 }, { threshold: 0.12 });
 document.querySelectorAll('.reveal').forEach(r => observer.observe(r));
 
+/* ── Lazy-load iframes: load src only when entering viewport ── */
+const iframeObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const iframe = e.target;
+      if (iframe.dataset.src && iframe.src !== iframe.dataset.src) {
+        iframe.src = iframe.dataset.src;
+      }
+      iframeObserver.unobserve(iframe);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '100px' });
+function observeLazyIframes() {
+  document.querySelectorAll('iframe[data-src]').forEach(f => iframeObserver.observe(f));
+}
+observeLazyIframes();
+
 /* ─────────────────────────────────────────
    MY RECENT WORKS — static 9:16 grid
    Add/remove items in recentData as needed.
@@ -486,7 +503,7 @@ function rwActivate(overlay, idx) {
   grid.innerHTML = recentData.map((item, idx) => {
     const previewSrc = rwHasVideo(item) ? `https://drive.google.com/file/d/${item.driveId}/preview` : '';
     const inner = rwHasVideo(item)
-      ? `<iframe class="rw-cover-iframe" src="${previewSrc}" allow="autoplay; fullscreen" allowfullscreen></iframe>
+      ? `<iframe class="rw-cover-iframe" src="about:blank" data-src="${previewSrc}" allow="autoplay; fullscreen" allowfullscreen></iframe>
          <div class="rw-click-cover" onclick="rwActivate(this,${idx})"></div>`
       : `<div style="position:absolute;inset:0;background:#0d0005;border-radius:24px;display:flex;align-items:center;justify-content:center;">
            <span style="font-family:'Rajdhani',sans-serif;font-size:.7rem;color:rgba(250,188,63,.5);letter-spacing:.1em;text-transform:uppercase;">No Video</span>
@@ -587,11 +604,11 @@ function makeSlide(item,isCenter){
   const preview = `https://drive.google.com/file/d/${item.driveId}/preview`;
   if(isCenter){
     /* Preview iframe IS the cover — transparent click-layer activates it */
-    return`<iframe class="sw-cover-iframe" src="${preview}" allow="autoplay; fullscreen" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:none;pointer-events:none;"></iframe>
+    return`<iframe class="sw-cover-iframe" src="about:blank" data-src="${preview}" allow="autoplay; fullscreen" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:none;pointer-events:none;"></iframe>
     <div class="sw-click-cover" onclick="swActivate(this)" style="position:absolute;inset:0;z-index:3;cursor:none;"></div>`;
   }
   /* Side slides: preview iframe, non-interactive */
-  return`<iframe src="${preview}" allow="autoplay; fullscreen" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:none;pointer-events:none;opacity:1;"></iframe>`;
+  return`<iframe src="about:blank" data-src="${preview}" allow="autoplay; fullscreen" allowfullscreen style="position:absolute;inset:0;width:100%;height:100%;border:none;pointer-events:none;opacity:1;"></iframe>`;
 }
 function swActivate(clickCover){
   const slide = clickCover.closest('.vid-slide');
@@ -621,6 +638,7 @@ function renderSlides(cat,autoplay=true){
   const existingIF=ce.querySelector('.sw-cover-iframe');
   if(existingIF)existingIF.style.pointerEvents='none';
   le.innerHTML=makeSlide(items[prev],false);ce.innerHTML=makeSlide(items[current],true);re.innerHTML=makeSlide(items[next],false);
+  observeLazyIframes();
   document.querySelectorAll(`#dots-${cat} .dot`).forEach((d,i)=>d.classList.toggle('active',i===current));
   /* iframe already shows preview as cover — no forced autoplay */
 }
